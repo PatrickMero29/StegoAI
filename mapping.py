@@ -37,27 +37,51 @@ class MessageEncoder:
             latent_vectors[i, :message_length] = message_tensor
 
         return latent_vectors
+    
+    def latent_to_binary(self, latent_vector, message_length):
+            extracted_bits = []
+            for i in range(message_length):
+                if latent_vector[i] > 0:
+                    extracted_bits.append(1)
+                else:
+                    extracted_bits.append(0)
+            return extracted_bits
+
+    def binary_to_text(self, binary_list):
+        byte_array = bytearray()
+        for i in range(0, len(binary_list), 8):
+            byte_chunk = binary_list[i:i+8]
+            byte_str = "".join(str(b) for b in byte_chunk) 
+            # Convert string to integer base 2
+            byte_array.append(int(byte_str, 2))
+            
+        # rs.decode returns a tuple: (decoded_message, ecc_bytes, error_locations)
+        decoded_bytes, _, _ = self.rs.decode(byte_array)
+        
+        return decoded_bytes.decode('utf-8')
 
 if __name__ == "__main__":
     encoder = MessageEncoder(latent_dim=256, ecc_symbols=10)
     secret_message = input("Enter your secret message: ")
-
+    
     try:
-        # Original size without ECC (1 byte per char)
-        raw_bits = len(secret_message) * 8
-        
-        # New size with ECC
         binary_data = encoder.text_to_binary(secret_message)
         ecc_bits = len(binary_data)
         
-        print(f"\nOriginal Text: '{secret_message}'")
-        print(f"Raw Message Size: {raw_bits} bits")
-        print(f"Protected Size (Message + Error Correction): {ecc_bits} bits")
-        
-        # Verify it fits in the vector
         latent_batch = encoder.binary_to_latent(binary_data, batch_size=1)
-        print(f"\nSuccessfully embedded into Latent Vector of size: {latent_batch.shape}")
-        print(f"Space remaining in vector: {encoder.latent_dim - ecc_bits} bits")
         
-    except ValueError as e:
+        print(f"\n[ENCODE] Protected Size: {ecc_bits} bits")
+        print(f"[ENCODE] Embedded into Vector of shape: {latent_batch.shape}")
+        
+        first_vector = latent_batch[0] 
+        
+        recovered_bits = encoder.latent_to_binary(first_vector, ecc_bits)
+        recovered_text = encoder.binary_to_text(recovered_bits)
+        
+        print(f"\n[DECODE] Extracted Text: '{recovered_text}'")
+        
+        if secret_message == recovered_text:
+            print("\nSUCCESS")
+            
+    except Exception as e:
         print(f"\n[!] ERROR: {e}")
