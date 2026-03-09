@@ -39,38 +39,31 @@ class Generator(nn.Module):
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
-    print("--- Testing the Generator Forward Pass ---")
-    
-    # 1. Initialize the AI
     latent_dim = 256
     gen = Generator(latent_dim=latent_dim)
     print("Generator initialized successfully.\n")
 
-    # 2. Create fake input (a batch of 4 random latent vectors)
+    # Testing inputs
     batch_size = 4
     z = torch.randn(batch_size, latent_dim)
     print(f"Input Vector Shape (Batch Size, Latent Dim): {z.shape}")
 
-    # 3. Run the Forward Pass!
-    # We use torch.no_grad() because we are just testing, not training
+    # torch.no_grad() for testing, not training
     with torch.no_grad():
         fake_images = gen(z)
 
-    # 4. Verify the Output Math
     print(f"Output Image Shape: {fake_images.shape}")
     print(f"Min pixel value (Should be >= -1.0): {fake_images.min().item():.4f}")
     print(f"Max pixel value (Should be <= 1.0): {fake_images.max().item():.4f}\n")
 
     if fake_images.shape == (batch_size, 1, 28, 28):
-        print("SUCCESS: The Generator matrix math is perfectly aligned!")
+        print("Success: The output shape is correct. Each image has 1 channel and is 28x28 pixels.")
     else:
-        print("[!] ERROR: The output shape is incorrect.")
+        print("Error: The output shape is incorrect. Expected (batch_size, 1, 28, 28).")
 
-    # 5. Visually verify the untrained output
-    print("\nRendering images... (Close the window to end the script).")
     fig, axes = plt.subplots(1, 4, figsize=(10, 3))
     for i in range(4):
-        # We use .squeeze() to remove the color channel so matplotlib can read it
+        # .squeeze() to remove the color channel, matplotlib can read it
         img_np = fake_images[i].squeeze().numpy()
         axes[i].imshow(img_np, cmap='gray')
         axes[i].set_title(f"Untrained {i+1}")

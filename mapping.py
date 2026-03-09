@@ -3,7 +3,7 @@ from reedsolo import RSCodec, ReedSolomonError
 
 class MessageEncoder:
     def __init__(self, latent_dim=100, ecc_symbols=10): 
-        self.latent_dim = latent_dim #latent_dim: size of the noise vector the GAN expects (usually 100).
+        self.latent_dim = latent_dim #latent_dim: size of the noise vector the GAN expects (usually 100)
         self.ecc_symbols = ecc_symbols
         self.rs = RSCodec(self.ecc_symbols) 
 
@@ -22,7 +22,7 @@ class MessageEncoder:
         return binary_list
 
     def binary_to_latent(self, binary_list, batch_size=1):
-        #Embeds the binary list into a PyTorch latent vector (tensor).
+        #Embeds the binary list into a PyTorch latent vector (tensor)
         message_length = len(binary_list)
         
         if message_length > self.latent_dim:
