@@ -35,8 +35,6 @@ class Extractor(nn.Module):
         return extracted_message
 
 if __name__ == "__main__":
-    print("--- Testing the Extractor Forward Pass ---")
-    
     latent_dim = 256
     ext = Extractor(latent_dim=latent_dim)
     print("Extractor initialized successfully.\n")

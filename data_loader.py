@@ -31,8 +31,8 @@ if __name__ == "__main__":
     
     train_features, train_labels = next(iter(train_dl))
     
-    fig, axes = plt.subplots(1, 4, figsize=(10, 3))
-    for i in range(4):
+    fig, axes = plt.subplots(1, 10, figsize=(10, 3))
+    for i in range(10):
         axes[i].imshow(train_features[i].squeeze(), cmap='gray')
         axes[i].set_title(f"Label: {train_labels[i].item()}")
         axes[i].axis('off')

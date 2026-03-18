@@ -84,4 +84,4 @@ if __name__ == "__main__":
             print("\nSUCCESS")
             
     except Exception as e:
-        print(f"\n[!] ERROR: {e}")
+        print(f"\nERROR: {e}")
