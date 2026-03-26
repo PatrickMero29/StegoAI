@@ -22,7 +22,7 @@ def train_model(num_epochs=5):
     gen = Generator(latent_dim=latent_dim).to(device)
     disc = Discriminator().to(device)
     ext = Extractor(latent_dim=latent_dim).to(device)
-    encoder = MessageEncoder(latent_dim=latent_dim, ecc_symbols=10)
+    encoder = MessageEncoder(latent_dim=latent_dim, ecc_symbols=16)
     
     criterion = StegoLoss(lambda_msg=2.5) #we keep lambda_msg slightly lower so the Generator focuses on drawing numbers for image quality phasing. find the right balance
     
@@ -74,7 +74,7 @@ def train_model(num_epochs=5):
         print(f"Epoch [{epoch+1}/{num_epochs}] | D Loss: {d_loss.item():.4f} | G Total Loss: {total_g_loss.item():.4f} | Data Loss: {data_loss.item():.4f}")
         
         # Save a grid of 25 fake images to see progress
-        save_image(fake_images.data[:10], f"saved_images/class_test_{epoch+1}.png", nrow=5, normalize=True) #change back
+        save_image(fake_images.data[:25], f"saved_images/epoch_new_{epoch+1}.png", nrow=5, normalize=True) 
 
     print("\nTraining complete. Saving AI weights.")
     torch.save(gen.state_dict(), "saved_models/generator.pth")
@@ -84,5 +84,5 @@ def train_model(num_epochs=5):
 
 if __name__ == "__main__":
     #check_training_loop()
-    train_model(num_epochs=5) #change
+    train_model(num_epochs=50) #change
 

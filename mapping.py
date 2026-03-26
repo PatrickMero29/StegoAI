@@ -2,7 +2,7 @@ import torch
 from reedsolo import RSCodec, ReedSolomonError
 
 class MessageEncoder:
-    def __init__(self, latent_dim=100, ecc_symbols=10): 
+    def __init__(self, latent_dim=100, ecc_symbols=16): 
         self.latent_dim = latent_dim #latent_dim: size of the noise vector the GAN expects (usually 100)
         self.ecc_symbols = ecc_symbols
         self.rs = RSCodec(self.ecc_symbols) 
