@@ -33,7 +33,6 @@ def get_dataloaders(batch_size=64):
 
 if __name__ == "__main__":
     train_dl, test_dl = get_dataloaders()
-    print("Data loaded successfully!")
     
     train_features, train_labels = next(iter(train_dl))
     

@@ -24,7 +24,7 @@ def train_model(num_epochs=5):
     ext = Extractor(latent_dim=latent_dim).to(device)
     encoder = MessageEncoder(latent_dim=latent_dim, ecc_symbols=16)
     
-    criterion = StegoLoss(lambda_msg=2.5) #we keep lambda_msg slightly lower so the Generator focuses on drawing numbers for image quality phasing. find the right balance
+    criterion = StegoLoss(lambda_msg=5.0) #we keep lambda_msg slightly lower so the Generator focuses on drawing numbers for image quality phasing. find the right balance
     
     # lr of 0.0002 is standard for GANs
     opt_gen_ext = optim.Adam(list(gen.parameters()) + list(ext.parameters()), lr=0.0002, betas=(0.5, 0.999))
@@ -64,7 +64,8 @@ def train_model(num_epochs=5):
             opt_gen_ext.zero_grad()
             
             fake_judgments_2 = disc(fake_images)
-            extracted_vectors = ext(fake_images)
+            noisy_fake_images = fake_images + (torch.randn_like(fake_images) * 0.02)
+            extracted_vectors = ext(noisy_fake_images)
             
             total_g_loss, img_loss, data_loss = criterion(fake_judgments_2, real_labels, extracted_vectors, secret_vectors)
             
@@ -74,7 +75,7 @@ def train_model(num_epochs=5):
         print(f"Epoch [{epoch+1}/{num_epochs}] | D Loss: {d_loss.item():.4f} | G Total Loss: {total_g_loss.item():.4f} | Data Loss: {data_loss.item():.4f}")
         
         # Save a grid of 25 fake images to see progress
-        save_image(fake_images.data[:25], f"saved_images/epoch_new_{epoch+1}.png", nrow=5, normalize=True) 
+        save_image(fake_images.data[:25], f"saved_images/epoch_pls_{epoch+1}.png", nrow=5, normalize=True) 
 
     print("\nTraining complete. Saving AI weights.")
     torch.save(gen.state_dict(), "saved_models/generator.pth")
