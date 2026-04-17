@@ -2,53 +2,54 @@ import torch
 import torch.nn as nn
 
 class Generator(nn.Module):
-    def __init__(self, latent_dim=256):
+    def __init__(self, latent_dim=512):
         super(Generator, self).__init__()
         
-        self.model = nn.Sequential(
-            #256-bit vector and expand 
-            nn.Linear(latent_dim, 256),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.BatchNorm1d(256),
+        self.project = nn.Linear(latent_dim, 512 * 4 * 4)
+        
+        self.main = nn.Sequential(
+            # Input State: [Batch, 512, 4, 4]
+            # ConvTranspose formula for size: (size - 1) * stride - 2 * padding + kernel_size
+            # (4 - 1)*2 - 2*1 + 4 = 8. Spatial size becomes 8x8.
+            nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(256),
+            nn.ReLU(True),
             
-            #Expand to 512 neurons
-            nn.Linear(256, 512),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.BatchNorm1d(512),
+            # State: [Batch, 256, 8, 8]
+            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(128),
+            nn.ReLU(True),
             
-            #Expand to 1024 neurons
-            nn.Linear(512, 1024),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.BatchNorm1d(1024),
+            # State: [Batch, 128, 16, 16]
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(64),
+            nn.ReLU(True),
             
-            #(1 color channel * 28 * 28)
-            nn.Linear(1024, 1 * 28 * 28),
+            # State: [Batch, 64, 32, 32]
+            nn.ConvTranspose2d(64, 3, kernel_size=4, stride=2, padding=1, bias=False),
             
             nn.Tanh()
         )
 
     def forward(self, z):
-        #z = the latent vector (seed + message)
-        img_flat = self.model(z)
-        
-        #[batch_size, channels, height, width]
-        img = img_flat.view(img_flat.size(0), 1, 28, 28)
+        x = self.project(z)
+        x = x.view(x.size(0), 512, 4, 4) 
+        img = self.main(x)
         
         return img
     
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
+    import numpy as np
 
-    latent_dim = 256
+    latent_dim = 512
     gen = Generator(latent_dim=latent_dim)
-    print("Generator initialized successfully.\n")
+    print("DCGAN Generator initialized successfully.\n")
 
-    # Testing inputs
     batch_size = 4
     z = torch.randn(batch_size, latent_dim)
-    print(f"Input Vector Shape (Batch Size, Latent Dim): {z.shape}")
+    print(f"Input Vector Shape: {z.shape}")
 
-    # torch.no_grad() for testing, not training
     with torch.no_grad():
         fake_images = gen(z)
 
@@ -56,17 +57,18 @@ if __name__ == "__main__":
     print(f"Min pixel value (Should be >= -1.0): {fake_images.min().item():.4f}")
     print(f"Max pixel value (Should be <= 1.0): {fake_images.max().item():.4f}\n")
 
-    if fake_images.shape == (batch_size, 1, 28, 28):
-        print("Success: The output shape is correct. Each image has 1 channel and is 28x28 pixels.")
+    if fake_images.shape == (batch_size, 3, 64, 64):
+        print("Success: The output shape is correct. Each image is 64x64 RGB.")
     else:
-        print("Error: The output shape is incorrect. Expected (batch_size, 1, 28, 28).")
+        print("Error: The output shape is incorrect. Check the convolution math.")
 
-    fig, axes = plt.subplots(1, 4, figsize=(10, 3))
+    fig, axes = plt.subplots(1, 4, figsize=(12, 3))
     for i in range(4):
-        # .squeeze() to remove the color channel, matplotlib can read it
-        img_np = fake_images[i].squeeze().numpy()
-        axes[i].imshow(img_np, cmap='gray')
-        axes[i].set_title(f"Untrained {i+1}")
+        img_unnorm = fake_images[i] * 0.5 + 0.5
+        img_np = np.transpose(img_unnorm.numpy(), (1, 2, 0))
+        
+        axes[i].imshow(img_np)
+        axes[i].set_title(f"Untrained RGB {i+1}")
         axes[i].axis('off')
     
     plt.tight_layout()

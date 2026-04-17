@@ -12,15 +12,15 @@ from mapping import MessageEncoder
 @st.cache_resource
 def load_models():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    latent_dim = 256
+    latent_dim = 512
     
     gen = Generator(latent_dim=latent_dim).to(device)
     ext = Extractor(latent_dim=latent_dim).to(device)
-    encoder = MessageEncoder(latent_dim=latent_dim, ecc_symbols=16)
+    encoder = MessageEncoder(latent_dim=latent_dim, ecc_symbols=32)
     
     try:
-        gen.load_state_dict(torch.load("saved_models/generator.pth", map_location=device, weights_only=True))
-        ext.load_state_dict(torch.load("saved_models/extractor.pth", map_location=device, weights_only=True))
+        gen.load_state_dict(torch.load("saved_models/rgb_blur_generator.pth", map_location=device, weights_only=True))
+        ext.load_state_dict(torch.load("saved_models/rgb_blur_extractor.pth", map_location=device, weights_only=True))
         gen.eval()
         ext.eval()
         return gen, ext, encoder, device, latent_dim, True
@@ -31,7 +31,7 @@ gen, ext, encoder, device, latent_dim, models_loaded = load_models()
 
 st.set_page_config(page_title="StegoAI", layout="centered")
 st.title("StegoAI")
-st.markdown("Hide encrypted text payloads inside AI-generated images.")
+st.markdown("Hide encrypted text payloads inside AI-generated color images.")
 
 if not models_loaded:
     st.error("Could not find trained models! Make sure 'generator.pth' and 'extractor.pth' are in the 'saved_models' folder.")
@@ -42,7 +42,7 @@ tab1, tab2 = st.tabs(["🔒 Encode Message", "🔓 Decode Image"])
 # TAB 1: ENCODE 
 with tab1:
     st.subheader("Generate an Image with a Secret Payload")
-    secret_text = st.text_input("Enter a short secret message (max ~15 chars):")
+    secret_text = st.text_input("Enter a secret message (max ~32 chars):")
     
     if st.button("Generate Image"):
         if secret_text:
@@ -53,22 +53,20 @@ with tab1:
                 with torch.no_grad():
                     fake_image = gen(secret_vector)
                 
-                # Convert PyTorch Tensor (-1.0 to 1.0) back to a viewable PIL Image (0 to 255)
-                # Mimics the normalize=True and value_range=(-1.0, 1.0) 
                 img_shifted = (fake_image + 1.0) / 2.0
                 img_shifted = torch.clamp(img_shifted, 0, 1)
                 img_pil = transforms.ToPILImage()(img_shifted.squeeze(0))
                 
-                st.image(img_pil, caption="AI Generated Image (Payload Embedded)", width=256)
+                st.image(img_pil, caption="AI Generated 64x64 Image", width=256)
                 
                 buf = io.BytesIO()
                 img_pil.save(buf, format="PNG")
                 byte_im = buf.getvalue()
                 
                 st.download_button(
-                    label="Download secret.png",
+                    label="Download secret_rgb.png",
                     data=byte_im,
-                    file_name="secret.png",
+                    file_name="secret_rgb.png",
                     mime="image/png"
                 )
                 st.success("Image generated successfully. You can now download it.")
@@ -85,10 +83,12 @@ with tab2:
     
     if st.button("Decode Message"):
         if uploaded_file is not None:
-            loaded_image = Image.open(uploaded_file).convert("L") # Ensure Grayscale
+            loaded_image = Image.open(uploaded_file).convert("RGB") 
+            
             transform = transforms.Compose([
+                transforms.Resize((64, 64)),
                 transforms.ToTensor(),
-                transforms.Normalize((0.5,), (0.5,))
+                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
             ])
             image_tensor = transform(loaded_image).unsqueeze(0).to(device)
             
@@ -111,7 +111,7 @@ with tab2:
             
             if recovered_text:
                 st.success(f"**DECODED MESSAGE:** {recovered_text}")
-                st.balloons() # thought this was cute
+                st.balloons() 
             else:
                 st.error("Failed to decode text. The message may be too corrupted or the image contains no data.")
         else:

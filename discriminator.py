@@ -6,36 +6,46 @@ class Discriminator(nn.Module):
         super(Discriminator, self).__init__()
         
         self.model = nn.Sequential(
+            # (3, 64, 64) 
+            # Downsample to 32x32
+            nn.Conv2d(3, 64, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.LeakyReLU(0.2, inplace=True),
+            
+            # Downsample to 16x16
+            nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(0.2, inplace=True),
+            
+            # Downsample to 8x8
+            nn.Conv2d(128, 256, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(0.2, inplace=True),
+            
+            # Downsample to 4x4
+            nn.Conv2d(256, 512, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(512),
+            nn.LeakyReLU(0.2, inplace=True),
+            
             nn.Flatten(),
             
-            nn.Linear(1 * 28 * 28, 512),
-            nn.LeakyReLU(0.2, inplace=True),
+            # The flattened size is 512 channels * 4 height * 4 width = 8192
+            nn.Linear(512 * 4 * 4, 1),
             
-            nn.Linear(512, 256),
-            nn.LeakyReLU(0.2, inplace=True),
-            
-            nn.Linear(256, 1),
-            
-            # probability between 0.0 and 1.0
             nn.Sigmoid()
         )
 
     def forward(self, img):
         validity = self.model(img)
-        
         return validity
 
 if __name__ == "__main__":
-    
     disc = Discriminator()
-    print("Discriminator initialized successfully.\n")
+    print("DCGAN Discriminator initialized successfully.\n")
 
-    # Temp testing inputs
     batch_size = 4
-    fake_images = torch.randn(batch_size, 1, 28, 28)
-    print(f"Input Image Shape (Batch Size, Channels, H, W): {fake_images.shape}")
+    fake_images = torch.randn(batch_size, 3, 64, 64)
+    print(f"Input Image Shape: {fake_images.shape}")
 
-    # forward pass
     with torch.no_grad():
         judgments = disc(fake_images)
 
@@ -43,6 +53,6 @@ if __name__ == "__main__":
     print(f"Scores (Probability of being Real):\n{judgments.squeeze().numpy()}\n")
 
     if judgments.shape == (batch_size, 1):
-        print("SUCCESS: The output shape is correct. Each image has a single score.")
+        print("SUCCESS: The output shape is correct.")
     else:
         print("Error: The output shape is incorrect. Expected (batch_size, 1).")

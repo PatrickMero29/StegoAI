@@ -2,31 +2,34 @@ import torch
 import torch.nn as nn
 
 class Extractor(nn.Module):
-    def __init__(self, latent_dim=256):
+    def __init__(self, latent_dim=512):
         super(Extractor, self).__init__()
         
         self.model = nn.Sequential(
-            # Takes the [1, 28, 28] image and creates 32 feature maps
-            nn.Conv2d(in_channels=1, out_channels=32, kernel_size=3, stride=2, padding=1),
+            # Input is (3, 64, 64)
+            nn.Conv2d(3, 64, kernel_size=4, stride=2, padding=1, bias=False),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.BatchNorm2d(32),
             
-            # Takes the 32 maps and turns them into 64
-            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=2, padding=1),
+            # Downsample to 16x16
+            nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(128),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.BatchNorm2d(64),
             
-            nn.Flatten(), # 64 channels * 7 height * 7 width = 3136
-            
-            # Dense layer to shrink the features
-            nn.Linear(3136, 512),
+            # Downsample to 8x8
+            nn.Conv2d(128, 256, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(256),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.BatchNorm1d(512),
             
-            # 256 numbers to match latent vector size
-            nn.Linear(512, latent_dim),
+            # Downsample to 4x4
+            nn.Conv2d(256, 512, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(512),
+            nn.LeakyReLU(0.2, inplace=True),
             
-            # output guesses strictly between -1.0 and 1.0, 
+            nn.Flatten(),
+            
+            # Flattened size is 512 * 4 * 4 = 8192
+            nn.Linear(8192, latent_dim),
+            
             nn.Tanh()
         )
 
@@ -35,12 +38,12 @@ class Extractor(nn.Module):
         return extracted_message
 
 if __name__ == "__main__":
-    latent_dim = 256
+    latent_dim = 512
     ext = Extractor(latent_dim=latent_dim)
-    print("Extractor initialized successfully.\n")
+    print("DCGAN Extractor initialized successfully.\n")
 
     batch_size = 4
-    fake_images = torch.randn(batch_size, 1, 28, 28)
+    fake_images = torch.randn(batch_size, 3, 64, 64)
     print(f"Input Image Shape: {fake_images.shape}")
 
     with torch.no_grad():
@@ -51,6 +54,6 @@ if __name__ == "__main__":
     print(f"Max value (Should be <= 1.0): {recovered_vector.max().item():.4f}\n")
 
     if recovered_vector.shape == (batch_size, latent_dim):
-        print("Extractor matrix math is perfectly aligned. Output shape is correct.")
+        print("SUCCESS: Matrix math is perfectly aligned. Output shape is correct.")
     else:
-        print("The output shape is incorrect.")
+        print("Error: The output shape is incorrect.")

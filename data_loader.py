@@ -3,23 +3,23 @@ from torchvision import datasets
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
+import numpy as np
 
 def get_dataloaders(batch_size=64):
-    # Add normalization so pixels are between -1.0 and 1.0
     transform = transforms.Compose([
+        transforms.Resize((64, 64)),
         transforms.ToTensor(),
-        transforms.Normalize((0.5,), (0.5,))
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)) 
     ])
 
-    train_dataset = datasets.MNIST(
+    train_dataset = datasets.CIFAR10(
         root="data", 
         train=True, 
         download=True, 
         transform=transform
     )
     
-    # load data
-    test_dataset = datasets.MNIST(
+    test_dataset = datasets.CIFAR10(
         root="data", 
         train=False, 
         download=True, 
@@ -36,12 +36,17 @@ if __name__ == "__main__":
     
     train_features, train_labels = next(iter(train_dl))
     
-    fig, axes = plt.subplots(1, 10, figsize=(10, 3))
+    print(f"New Image Batch Shape: {train_features.shape}") # Should be [64, 3, 64, 64]
+    
+    fig, axes = plt.subplots(1, 10, figsize=(15, 3))
     for i in range(10):
-        # We have to un-normalize the image just to display it properly in pyplot
-        img = train_features[i].squeeze() * 0.5 + 0.5 
-        axes[i].imshow(img, cmap='gray')
-        axes[i].set_title(f"Label: {train_labels[i].item()}")
+        img = train_features[i] * 0.5 + 0.5 
+        
+        img_np = np.transpose(img.numpy(), (1, 2, 0))
+        
+        axes[i].imshow(img_np)
+        axes[i].set_title(f"Class: {train_labels[i].item()}")
         axes[i].axis('off')
     
+    plt.tight_layout()
     plt.show()

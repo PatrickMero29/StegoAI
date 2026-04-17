@@ -10,25 +10,24 @@ from discriminator import Discriminator
 from extractor import Extractor
 from loss import StegoLoss
 
-def train_model(num_epochs=5):
+def train_model(num_epochs):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}\n")
 
     os.makedirs("saved_images", exist_ok=True)
     os.makedirs("saved_models", exist_ok=True)
 
-    latent_dim = 256
+    latent_dim = 512
     
     gen = Generator(latent_dim=latent_dim).to(device)
     disc = Discriminator().to(device)
     ext = Extractor(latent_dim=latent_dim).to(device)
-    encoder = MessageEncoder(latent_dim=latent_dim, ecc_symbols=16)
+    encoder = MessageEncoder(latent_dim=latent_dim, ecc_symbols=32)
     
-    criterion = StegoLoss(lambda_msg=5.0) #we keep lambda_msg slightly lower so the Generator focuses on drawing numbers for image quality phasing. find the right balance
+    criterion = StegoLoss(lambda_msg=2.0) 
     
-    # lr of 0.0002 is standard for GANs
     opt_gen_ext = optim.Adam(list(gen.parameters()) + list(ext.parameters()), lr=0.0002, betas=(0.5, 0.999))
-    opt_disc = optim.Adam(disc.parameters(), lr=0.0001, betas=(0.5, 0.999)) #0.0001/0.0002
+    opt_disc = optim.Adam(disc.parameters(), lr=0.0002, betas=(0.5, 0.999)) 
     
     train_dl, _ = get_dataloaders(batch_size=64)
 
@@ -50,7 +49,7 @@ def train_model(num_epochs=5):
             real_judgments = disc(real_images)
             fake_judgments = disc(fake_images.detach())
             
-            real_labels = torch.ones(batch_size, 1).to(device)
+            real_labels = torch.full((batch_size, 1), 0.9, device=device)
             fake_labels = torch.zeros(batch_size, 1).to(device)
             
             d_loss_real = criterion.adv_loss(real_judgments, real_labels)
@@ -74,8 +73,7 @@ def train_model(num_epochs=5):
             
         print(f"Epoch [{epoch+1}/{num_epochs}] | D Loss: {d_loss.item():.4f} | G Total Loss: {total_g_loss.item():.4f} | Data Loss: {data_loss.item():.4f}")
         
-        # Save a grid of 25 fake images to see progress
-        save_image(fake_images.data[:25], f"saved_images/epoch_pls_{epoch+1}.png", nrow=5, normalize=True) 
+        save_image(fake_images.data[:25], f"saved_images/epoch_rgb1_{epoch+1}.png", nrow=5, normalize=True, value_range=(-1.0, 1.0)) 
 
     print("\nTraining complete. Saving AI weights.")
     torch.save(gen.state_dict(), "saved_models/generator.pth")
@@ -84,6 +82,4 @@ def train_model(num_epochs=5):
     print("Models saved successfully in the 'saved_models' folder.")
 
 if __name__ == "__main__":
-    #check_training_loop()
-    train_model(num_epochs=50) #change
-
+    train_model(num_epochs=100)
